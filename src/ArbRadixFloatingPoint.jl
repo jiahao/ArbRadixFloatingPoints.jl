@@ -62,19 +62,29 @@ end
 function factorize_leastsquares(num, radix, precision, Tdigit, exponent;
                    verbose::Bool=false)
 
-    D = zeros(typeof(real(radix)), precision, precision)
-    c = zeros(typeof(real(radix)), precision)
-    rconj = conj(radix)
-    for i=1:precision, j=1:precision
-        z = rconj^-i*radix^-j
-        D[i,j] = real(z+conj(z))
+    significand = zeros(Tdigit, precision)
+
+    #Super expensive greedy exhaustion following a full least squares solve
+    #This is completely overkill because
+    # D is low rank (rank 1 for real radix, 2 for complex)
+    # we only need the first entry of signif
+    for k=1:precision
+        D = zeros(typeof(real(radix)), precision+1-k, precision+1-k)
+        c = zeros(typeof(real(radix)), precision+1-k)
+        rconj = conj(radix)
+        for i=1:precision+1-k, j=1:precision+1-k
+            z = rconj^-(i+k-1)*radix^-(j+k-1)
+            D[i,j] = real(z+conj(z))
+        end
+        for i=1:precision+1-k
+            z = rconj^-(i+k-1)*num*radix^-(exponent+1)
+            c[i] = real(z+conj(z))
+        end
+        signif = pinv(D)*c
+        significand[k] = d = round(Tdigit, signif[1])
+        num -= d * radix^(exponent+1-k)
     end
-    for i=1:precision
-        z = rconj^-i*num*radix^-(exponent+1)
-        c[i] = real(z+conj(z))
-    end
-    significand = pinv(D)*c
-    round.(Tdigit, significand)
+    significand
 end
 
 function factorize_greedy(num, radix, precision, Tdigit, exponent;
