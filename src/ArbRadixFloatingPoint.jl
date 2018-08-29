@@ -52,8 +52,8 @@ function find_exponent(num, radix, precision)
         exponent = 0
     else #log_abs_radix != 0
         exponent = floor(Int, log(abs(num))/log_abs_radix)
-        if log_abs_radix < 0 #"Inverted radix with magnitude < 1
-            exponent -= precision
+        if log_abs_radix < 0 #Inverted radix with magnitude < 1
+            exponent += precision+1
         end
     end
     exponent
