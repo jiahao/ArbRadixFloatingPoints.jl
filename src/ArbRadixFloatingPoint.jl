@@ -41,14 +41,13 @@ function Base.convert(::Type{ArbRadixFloat{radix,precision,Tdigit}},
     if log_abs_radix == 0
         #Do not attempt to normalize significand if radix has magnitude 1
         exponent = 0
-    elseif  #log_abs_radix != 0
+    else #log_abs_radix != 0
         exponent = floor(Int, log(abs(num))/log_abs_radix)
         if log_abs_radix < 0 #"Inverted radix with magnitude < 1
             exponent -= precision
         end
     end
     significand = zeros(Tdigit, precision)
-
     monomial = radix ^ exponent
     for digit_id in 1:precision
         quotient = real(conj(num)*monomial)/real(conj(monomial)*monomial)
@@ -56,7 +55,7 @@ function Base.convert(::Type{ArbRadixFloat{radix,precision,Tdigit}},
         num -= digit*monomial
         monomial /= radix
         significand[digit_id] = digit
-        #println(digit_id, '\t', digit, '\t', quotient, '\t', abs(num))
+        #println(exponent+1-digit_id, '\t', digit, '\t', quotient, '\t', abs(num))
         if num == 0 #Exactly representable
             break
         end
