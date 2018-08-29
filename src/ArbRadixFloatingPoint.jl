@@ -30,13 +30,19 @@ function Base.convert(::Type{T}, num::ArbRadixFloat{radix,precision,Tdigit}) whe
     y
 end
 
-Base.convert(::Type{ArbRadixFloat{radix,precision}}, num :: Number) where radix where precision =
+Base.convert(::Type{ArbRadixFloat{radix,precision}}, num :: Number, verbose::Bool=false) where radix where precision =
     Base.convert(ArbRadixFloat{radix,precision,Int}, num)
 
 #TODO Bad things happen for bases of magnitude <= 1
 function Base.convert(::Type{ArbRadixFloat{radix,precision,Tdigit}},
                       num :: Number) where radix where precision where Tdigit
 
+    exponent = find_exponent(num, radix, precision)
+    significand = factorize(num, radix, precision, Tdigit, exponent)
+    ArbRadixFloat{radix,precision,Tdigit}(significand,exponent)
+end
+
+function find_exponent(num, radix, precision)
     log_abs_radix = log(abs(radix))
     if log_abs_radix == 0
         #Do not attempt to normalize significand if radix has magnitude 1
@@ -47,22 +53,38 @@ function Base.convert(::Type{ArbRadixFloat{radix,precision,Tdigit}},
             exponent -= precision
         end
     end
+    exponent
+end
+
+function factorize(num, radix, precision, Tdigit, exponent;
+                   verbose::Bool=false)
+
     significand = zeros(Tdigit, precision)
     monomial = radix ^ exponent
+    if verbose
+        println("Starting norm: ", abs(num))
+        println("Starting exponent: ", exponent)
+        println("Power\t| Digit\t| Quotient\t| Residual norm\t| Change")
+        println("-----\t| -----\t| --------\t| -------------\t| ------")
+    end
     for digit_id in 1:precision
         quotient = real(conj(num)*monomial)/real(conj(monomial)*monomial)
         digit = round(Tdigit, quotient)
         num -= digit*monomial
         monomial /= radix
         significand[digit_id] = digit
-        #println(exponent+1-digit_id, '\t', digit, '\t', quotient, '\t', abs(num))
+        if verbose
+            println(exponent+1-digit_id, "\t|", digit, "\t|", quotient, "\t|", abs(num), "\t|", abs(digit*monomial))
+        end
         if num == 0 #Exactly representable
+            if verbose
+                println("Exact representation found")
+            end
             break
         end
     end
-    ArbRadixFloat{radix,precision,Tdigit}(significand,exponent)
+    significand
 end
-
 
 Base.precision(num::ArbRadixFloat{radix,precision,Tdigit}) where radix where precision where Tdigit = precision
 
