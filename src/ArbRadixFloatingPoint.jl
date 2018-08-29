@@ -1,5 +1,6 @@
 module ArbRadixFloatingPoint
 
+using LinearAlgebra
 using StaticArrays
 
 export ArbRadixFloat
@@ -40,7 +41,7 @@ function convert(::Type{ArbRadixFloat{radix,precision,Tdigit}},
                       num :: Number) where radix where precision where Tdigit
 
     exponent = find_exponent(num, radix, precision)
-    significand = factorize(num, radix, precision, Tdigit, exponent)
+    significand = factorize_leastsquares(num, radix, precision, Tdigit, exponent)
     ArbRadixFloat{radix,precision,Tdigit}(significand,exponent)
 end
 
@@ -58,7 +59,25 @@ function find_exponent(num, radix, precision)
     exponent
 end
 
-function factorize(num, radix, precision, Tdigit, exponent;
+function factorize_leastsquares(num, radix, precision, Tdigit, exponent;
+                   verbose::Bool=false)
+
+    D = zeros(typeof(real(radix)), precision, precision)
+    c = zeros(typeof(real(radix)), precision)
+    rconj = conj(radix)
+    for i=1:precision, j=1:precision
+        z = rconj^-i*radix^-j
+        D[i,j] = real(z+conj(z))
+    end
+    for i=1:precision
+        z = rconj^-i*num*radix^-(exponent+1)
+        c[i] = real(z+conj(z))
+    end
+    significand = pinv(D)*c
+    round.(Tdigit, significand)
+end
+
+function factorize_greedy(num, radix, precision, Tdigit, exponent;
                    verbose::Bool=false)
 
     significand = zeros(Tdigit, precision)
@@ -99,5 +118,7 @@ end
 function *(x::ArbRadixFloat{radix,precision,Tdigit}, y::ArbRadixFloat{radix,precision,Tdigit}) where radix where precision where Tdigit
     Twork = promote_type(typeof(radix), Tdigit)
     convert(ArbRadixFloat{radix,precision,Tdigit}, convert(Twork, x) * convert(Twork, y))
+end
+
 end # module
 
