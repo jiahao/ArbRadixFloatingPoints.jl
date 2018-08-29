@@ -141,7 +141,8 @@ function real(num::ArbRadixFloat{radix,precision,Tdigit}) where radix where prec
 end
 
 function float(num::ArbRadixFloat{radix,precision,Tdigit}) where radix where precision where Tdigit
-    float(convert(promote_type(typeof(radix), Tdigit), num))
+    anstype = promote_type(typeof(float(radix)), Tdigit)
+    convert(anstype, ArbRadixFloat{float(radix),precision,Tdigit}(num.significand, num.exponent))
 end
 
 function *(x::ArbRadixFloat{radix,precision,Tdigit}, y::ArbRadixFloat{radix,precision,Tdigit}) where radix where precision where Tdigit
