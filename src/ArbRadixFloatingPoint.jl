@@ -5,7 +5,7 @@ using StaticArrays
 
 export ArbRadixFloat
 
-import Base: *, convert, abs, precision
+import Base: -, *, conj, convert, abs, precision, real, float
 
 """
 Floating point with arbitrary radix
@@ -35,6 +35,9 @@ end
 
 convert(::Type{ArbRadixFloat{radix,precision}}, num :: Number, verbose::Bool=false) where radix where precision =
     convert(ArbRadixFloat{radix,precision,Int}, num)
+
+convert(::Type{ArbRadixFloat{radix,precision,Tdigit}}, num :: ArbRadixFloat{radix,precision,Tdigit}, verbose::Bool=false) where radix where precision where Tdigit = num
+
 
 #TODO Bad things happen for bases of magnitude <= 1
 function convert(::Type{ArbRadixFloat{radix,precision,Tdigit}},
@@ -71,18 +74,19 @@ function factorize_leastsquares(num, radix, precision, Tdigit, exponent;
     for k=1:precision
         D = zeros(typeof(real(radix)), precision+1-k, precision+1-k)
         c = zeros(typeof(real(radix)), precision+1-k)
-        rconj = conj(radix)
+        r = float(radix)
+        rconj = conj(r)
         for i=1:precision+1-k, j=1:precision+1-k
-            z = rconj^-(i+k-1)*radix^-(j+k-1)
+            z = rconj^-(i+k-1)*r^-(j+k-1)
             D[i,j] = real(z+conj(z))
         end
         for i=1:precision+1-k
-            z = rconj^-(i+k-1)*num*radix^-(exponent+1)
+            z = rconj^-(i+k-1)*num*r^-(exponent+1)
             c[i] = real(z+conj(z))
         end
         signif = pinv(D)*c
         significand[k] = d = round(Tdigit, signif[1])
-        num -= d * radix^(exponent+1-k)
+        num -= d * r^(exponent+1-k)
     end
     significand
 end
@@ -119,10 +123,25 @@ end
 
 precision(num::ArbRadixFloat{radix,precision,Tdigit}) where radix where precision where Tdigit = precision
 
+conj(num::ArbRadixFloat{radix,precision,Tdigit}) where radix where precision where Tdigit =
+    ArbRadixFloat{conj(radix),precision,Tdigit}(num.significand, num.exponent)
+
+function -(num::ArbRadixFloat{radix,precision,Tdigit}) where radix where precision where Tdigit
+    ArbRadixFloat{conj(radix),precision,Tdigit}(-num.significand, num.exponent)
+end
+
 # These operations are just placeholders in lieu of actually doing the computations natively
 
 function abs(num::ArbRadixFloat{radix,precision,Tdigit}) where radix where precision where Tdigit
     abs(convert(promote_type(typeof(radix), Tdigit), num))
+end
+
+function real(num::ArbRadixFloat{radix,precision,Tdigit}) where radix where precision where Tdigit
+    real(convert(promote_type(typeof(radix), Tdigit), num))
+end
+
+function float(num::ArbRadixFloat{radix,precision,Tdigit}) where radix where precision where Tdigit
+    float(convert(promote_type(typeof(radix), Tdigit), num))
 end
 
 function *(x::ArbRadixFloat{radix,precision,Tdigit}, y::ArbRadixFloat{radix,precision,Tdigit}) where radix where precision where Tdigit
