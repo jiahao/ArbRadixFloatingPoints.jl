@@ -4,6 +4,8 @@ using StaticArrays
 
 export ArbRadixFloat
 
+import Base: *, convert, abs, precision
+
 """
 Floating point with arbitrary radix
 
@@ -20,7 +22,7 @@ struct ArbRadixFloat{radix,precision,Tdigit} <: Number
 end
 
 # Naive conversion and addition
-function Base.convert(::Type{T}, num::ArbRadixFloat{radix,precision,Tdigit}) where T <: AbstractFloat where radix where precision where Tdigit
+function convert(::Type{T}, num::ArbRadixFloat{radix,precision,Tdigit}) where T <: Number where radix where precision where Tdigit
     y = zero(T)
     monomial = radix^num.exponent
     for digit in num.significand
@@ -30,11 +32,11 @@ function Base.convert(::Type{T}, num::ArbRadixFloat{radix,precision,Tdigit}) whe
     y
 end
 
-Base.convert(::Type{ArbRadixFloat{radix,precision}}, num :: Number, verbose::Bool=false) where radix where precision =
-    Base.convert(ArbRadixFloat{radix,precision,Int}, num)
+convert(::Type{ArbRadixFloat{radix,precision}}, num :: Number, verbose::Bool=false) where radix where precision =
+    convert(ArbRadixFloat{radix,precision,Int}, num)
 
 #TODO Bad things happen for bases of magnitude <= 1
-function Base.convert(::Type{ArbRadixFloat{radix,precision,Tdigit}},
+function convert(::Type{ArbRadixFloat{radix,precision,Tdigit}},
                       num :: Number) where radix where precision where Tdigit
 
     exponent = find_exponent(num, radix, precision)
@@ -86,7 +88,16 @@ function factorize(num, radix, precision, Tdigit, exponent;
     significand
 end
 
-Base.precision(num::ArbRadixFloat{radix,precision,Tdigit}) where radix where precision where Tdigit = precision
+precision(num::ArbRadixFloat{radix,precision,Tdigit}) where radix where precision where Tdigit = precision
 
+# These operations are just placeholders in lieu of actually doing the computations natively
+
+function abs(num::ArbRadixFloat{radix,precision,Tdigit}) where radix where precision where Tdigit
+    abs(convert(promote_type(typeof(radix), Tdigit), num))
+end
+
+function *(x::ArbRadixFloat{radix,precision,Tdigit}, y::ArbRadixFloat{radix,precision,Tdigit}) where radix where precision where Tdigit
+    Twork = promote_type(typeof(radix), Tdigit)
+    convert(ArbRadixFloat{radix,precision,Tdigit}, convert(Twork, x) * convert(Twork, y))
 end # module
 
