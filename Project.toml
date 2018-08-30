@@ -1,6 +1,7 @@
 name = "ArbRadixFloatingPoints"
 authors = ["Jiahao Chen <jiahao@csail.mit.edu>"]
 version = "0.1.0"
+uuid = "a564004c-c06d-4787-a680-7596ad24a1c0"
 
 [deps]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
