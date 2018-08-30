@@ -187,5 +187,7 @@ function *(x::ArbRadixFloat{radix,precision,Tdigit}, y::ArbRadixFloat{radix,prec
     convert(ArbRadixFloat{radix,precision,Tdigit}, convert(Twork, x) * convert(Twork, y))
 end
 
+include("show.jl")
+
 end # module
 
