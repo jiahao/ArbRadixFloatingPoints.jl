@@ -51,7 +51,7 @@ for func in (:abs, :imag, :real, :norm)
     end
 end
 
-for func in (:+, :-, :*, :/, :\, :^)
+for op in (:+, :-, :*, :/, :\, :^)
     @eval begin
         function ($op)(x::ArbRadixFloat{radix,precision,Tdigit}, y::ArbRadixFloat{radix,precision,Tdigit}) where {radix,precision,Tdigit}
             Twork = promote_type(typeof(radix), Tdigit)
