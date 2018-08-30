@@ -1,4 +1,4 @@
-using ArbRadixFloatingPoint
+using ArbRadixFloatingPoints
 using Test
 
 let x = 2im, z = convert(ArbRadixFloat{x,2}, x)

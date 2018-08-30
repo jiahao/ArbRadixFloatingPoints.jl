@@ -1,4 +1,4 @@
-module ArbRadixFloatingPoint
+module ArbRadixFloatingPoints
 
 using LinearAlgebra
 using StaticArrays
