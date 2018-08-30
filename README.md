@@ -41,6 +41,8 @@ julia> abs(float(Q) - q2) #pretty lossy but doable
 
 ## Implementation note
 
+`ArbRadixFloat` is *not* a subtype of `AbstractFloat` because there's no guarantee that an `ArbRadixFloat` is a real number!
+
 Quite a lot of papers have been written on non-integer numerations, complex base systems, and the like.
 
 Strangely, though, the non-integer floating point numbers do not appear to be written down anywhere, even though the generalization from ordinary integer-radixed floating point numbers is obvious to define.
@@ -60,5 +62,6 @@ My first attempt as this conversion is `factorize_greedy`, which is quite fragil
 
 - By default, the digits are allowed to take any value that fits in machine `Int`s, _including negative values_. Restrictions to nonnegative digits, binary digits, or similar have not been implemented, so many numeration systems, such as Knuth's quater-imaginary system or the balanced ternary system, are _not_ computed by this package.
 - No arithmetic on these numbers have been implemented. There's so much to do!
+- No attempt is made to form normalized numbers. The conversion to `ArbRadixFloat` is known to generate denormalized floats.
 - The conversion from ordinary binary floating point to `ArbRadixFloat` is not guaranteed to be the best possible norm preserving conversion.
 - I have no idea how to think about rounding modes for `ArbRadixFloat`s
