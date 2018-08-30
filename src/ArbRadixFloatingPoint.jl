@@ -39,25 +39,27 @@ convert(::Type{ArbRadixFloat{radix,precision}}, num :: Number, verbose::Bool=fal
 convert(::Type{ArbRadixFloat{radix,precision,Tdigit}}, num :: ArbRadixFloat{radix,precision,Tdigit}, verbose::Bool=false) where radix where precision where Tdigit = num
 
 
-#TODO Bad things happen for bases of magnitude <= 1
 function convert(::Type{ArbRadixFloat{radix,precision,Tdigit}},
                       num :: Number) where radix where precision where Tdigit
-
-    exponent = find_exponent(num, radix, precision)
-    significand = factorize_leastsquares(num, radix, precision, Tdigit, exponent)
-    ArbRadixFloat{radix,precision,Tdigit}(significand,exponent)
+    if abs(radix) >= 1
+        exponent = find_exponent(num, radix)
+        significand = factorize_leastsquares(num, radix, precision, Tdigit, exponent)
+        ArbRadixFloat{radix,precision,Tdigit}(significand, exponent)
+    else #Compute using inverse radix and then convert back
+        iradix = inv(radix)
+        exponent = find_exponent(num, iradix)
+        significand = factorize_leastsquares(num, iradix, precision, Tdigit, exponent)
+        ArbRadixFloat{radix,precision,Tdigit}(reverse!(significand), precision-1-exponent)
+    end
 end
 
-function find_exponent(num, radix, precision)
+function find_exponent(num, radix)
     log_abs_radix = log(abs(radix))
     if log_abs_radix == 0
         #Do not attempt to normalize significand if radix has magnitude 1
         exponent = 0
     else #log_abs_radix != 0
         exponent = floor(Int, log(abs(num))/log_abs_radix)
-        if log_abs_radix < 0 #Inverted radix with magnitude < 1
-            exponent += precision+1
-        end
     end
     exponent
 end
@@ -67,26 +69,56 @@ function factorize_leastsquares(num, radix, precision, Tdigit, exponent;
 
     significand = zeros(Tdigit, precision)
 
-    #Super expensive greedy exhaustion following a full least squares solve
-    #This is completely overkill because
-    # D is low rank (rank 1 for real radix, 2 for complex)
+    # Super expensive greedy exhaustion following a full least squares solve
+    # This is completely overkill because
+    # D is low rank and symmetric (rank 1 for real radix, 2 for complex)
     # we only need the first entry of signif
-    for k=1:precision
-        D = zeros(typeof(real(radix)), precision+1-k, precision+1-k)
-        c = zeros(typeof(real(radix)), precision+1-k)
+    # and also "wrong" because the least squares solution is "undesirable"
+    # because if you look at unit radixes like im, you will see the solution
+    # norm spread out over many elements but really you just want the sparsest one
+    # for unit radixes there is usually no unique numeration
+    # and this method will eventually converge on one particular numeration
+    # with the mass focused toward the last few 'digits'
+    # but in some sense it's not the intuitive one; want the mass focused toward
+    # the front
+    if verbose
+        println("Starting norm: ", abs(num))
+        println("Starting exponent: ", exponent)
+        println("Power\t| Digit\t| Solution \t| Residual norm\t| Change")
+        println("-----\t| -----\t| -------- \t| -------------\t| ------")
+    end
+
+    #Element type of working intermediate problem
+    eltype = typeof(float(real(radix)))
+
+    for digit_id=1:precision
+        nk = precision+1-digit_id
+        D = zeros(eltype, nk, nk)
+        c = zeros(eltype, nk)
         r = float(radix)
         rconj = conj(r)
-        for i=1:precision+1-k, j=1:precision+1-k
-            z = rconj^-(i+k-1)*r^-(j+k-1)
+        for i=1:nk, j=1:nk
+            z = rconj^-(i+digit_id-1)*r^-(j+digit_id-1)
             D[i,j] = real(z+conj(z))
         end
-        for i=1:precision+1-k
-            z = rconj^-(i+k-1)*num*r^-(exponent+1)
+        for i=1:nk
+            z = rconj^-(i+digit_id-1)*num*r^-(exponent+1)
             c[i] = real(z+conj(z))
         end
         signif = pinv(D)*c
-        significand[k] = d = round(Tdigit, signif[1])
-        num -= d * r^(exponent+1-k)
+        significand[digit_id] = digit = round(Tdigit, signif[1])
+        powr = exponent+1-digit_id
+        Δ = digit * r^powr
+        num -= Δ
+        if verbose
+            println(powr, "\t|", digit, "\t|", signif, "\t|", abs(num), "\t|", abs(Δ))
+        end
+        if num == 0 #Exactly representable
+            if verbose
+                println("Exact representation found")
+            end
+            break
+        end
     end
     significand
 end
