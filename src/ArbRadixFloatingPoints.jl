@@ -96,19 +96,24 @@ function factorize_leastsquares(num, radix, precision, Tdigit, exponent;
         D = zeros(eltype, nk, nk)
         c = zeros(eltype, nk)
         r = float(radix)
-        rconj = conj(r)
+        ir = inv(r)
+        irconj = conj(ir)
         for i=1:nk, j=1:nk
-            z = rconj^-(i+digit_id-1)*r^-(j+digit_id-1)
+            z = irconj^(i+digit_id-1)*ir^(j+digit_id-1)
             D[i,j] = real(z+conj(z))
         end
         for i=1:nk
-            z = rconj^-(i+digit_id-1)*num*r^-(exponent+1)
+            z = irconj^(i+digit_id-1)*num*ir^(exponent+1)
             c[i] = real(z+conj(z))
         end
         signif = pinv(D)*c
         significand[digit_id] = digit = round(Tdigit, signif[1])
         powr = exponent+1-digit_id
-        Δ = digit * r^powr
+        if powr >= 0
+            Δ = digit * r^powr
+        else #Some number types don't have x^-n defined, manually rewrite as inv(x)^n
+            Δ = digit * ir^-powr
+        end
         num -= Δ
         if verbose
             println(powr, "\t|", digit, "\t|", signif, "\t|", abs(num), "\t|", abs(Δ))
