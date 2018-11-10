@@ -4,12 +4,22 @@ function show(io::IO, z::ArbRadixFloat{radix,precision,Tdigit}) where {radix,pre
     print(io, '(')
     print(io, prettystring_significand(z.significand))
     print(io, ')')
-    print(io, subscriptstring(radix))
+    (RAINBOW_MODE[] ? print_rainbow : print)(io, subscriptstring(radix))
     print(io, " × (")
     print(io, radix)
     print(io, ')')
     print(io, superscriptstring(z.exponent))
 end
+
+const RAINBOW = [204, 215, 149, 120, 49, 45, 34, 100, 129, 200]
+const RAINBOW_MODE = Ref(false)
+function print_rainbow(io, s)
+    for (n, c) in enumerate(s)
+        printstyled(io, c, color=RAINBOW[mod1(n, length(RAINBOW))])
+    end
+end
+we_want_rainbows!() = RAINBOW_MODE[] = true
+no_more_rainbows!() = RAINBOW_MODE[] = false
 
 "This character gets used to print negative digits"
 const overline = '\u305'
